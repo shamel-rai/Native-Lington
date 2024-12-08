@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 768">
+  <!-- Stylized 'L' mark -->
+  <path 
+    d="M328 148 C 328 148, 328 392, 328 458 C 328 524, 370 540, 452 540 C 534 540, 700 540, 700 540" 
+    stroke="#1A1A1A" 
+    stroke-width="39" 
+    stroke-linecap="round" 
+    fill="none"
+  />
+  
+  <!-- Subtle dot connecting elements -->
+  <circle cx="700" cy="540" r="20" fill="#333333"/>
+  <circle cx="328" cy="148" r="20" fill="#333333"/>
+  
+  <!-- Modern line accents -->
+  <line 
+    x1="247" 
+    y1="638" 
+    x2="777" 
+    y2="638" 
+    stroke="#D4D4D4" 
+    stroke-width="5"
+  />
+  
+  <!-- Company name - smaller LINGTON -->
+  <text 
+    x="512" 
+    y="458" 
+    font-family="Arial" 
+    font-size="52" 
+    font-weight="bold" 
+    text-anchor="middle" 
+    fill="#666666"
+    letter-spacing="26"
+  >
+    LINGTON
+  </text>
+  
+  <!-- CONNECT made larger and bolder -->
+  <text 
+    x="512" 
+    y="574" 
+    font-family="Arial" 
+    font-size="118" 
+    font-weight="900" 
+    text-anchor="middle" 
+    fill="#000000"
+    letter-spacing="3"
+  >
+    CONNECT
+  </text>
+  
+  <!-- Subtle accent line below CONNECT -->
+  <line 
+    x1="350" 
+    y1="607" 
+    x2="674" 
+    y2="607" 
+    stroke="#333333" 
+    stroke-width="7"
+  />
+</svg>
