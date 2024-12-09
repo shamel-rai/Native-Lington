@@ -1,98 +1,153 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Pressable } from 'react-native';
-import React from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+    Alert,
+    Pressable,
+    ActivityIndicator
+} from 'react-native';
+import React, { useEffect, useState } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { useAuth } from '../../context/AuthProvider';
 import { useRouter } from 'expo-router';
 import Header from '../../components/Header';
 import { heightPercentage, widthPercentage } from '../../helpers/common';
-import Icon from '../../assets/icons';
 import { theme } from '../../constants/theme';
 import Avatar from '../../components/Avatar';
+import axios from 'axios';
+import * as SecureStore from "expo-secure-store";
+import Icon from '../../assets/icons';
 
 const Profile = () => {
-    const { user, setAuth, logout } = useAuth();
+    const { user, logout, loading } = useAuth();
     const router = useRouter();
+    const [profileData, setProfileData] = useState(null); // To store the user profile fetched from API
 
+    /**
+     * Fetch User Profile from API
+     */
+    const fetchUserProfile = async () => {
+        try {
+            const token = await SecureStore.getItemAsync('Token');
+            if (!token) {
+                Alert.alert("Error", "No token found, please login again.");
+                return;
+            }
 
-    const onLogout = async () => {
-        await logout;
-        router.replace('/welcome')
+            const response = await axios.get(`http://192.168.101.6:3001/api/v1/${user.id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (response.data) {
+                setProfileData(response.data.user);
+            }
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            Alert.alert("Error", "There was an issue fetching the profile data.");
+        }
+    };
+
+    /**
+     * Call fetchUserProfile only when user is available
+     */
+    useEffect(() => {
+        if (user?.id) {
+            fetchUserProfile();
+        }
+    }, [user]);
+
+    if (loading) {
+        return <ActivityIndicator size="large" color={theme.colors.primary} />;
     }
+
+    if (!user) {
+        return <Text>User not logged in</Text>;
+    }
+
+    // Merge the local user from context with profile data from API
+    const combinedUser = { ...user, ...profileData };
+
+    /**
+     * Logout handler
+     */
     const handleLogout = async () => {
-        // show confirmation
-        Alert.alert('Confirm', 'Are you sure you want to logout', [{
-            text: 'Cancel',
-            onPress: () => console.log("cancelled"),
-            style: 'cancel'
-        },
-        {
-            text: 'Logout',
-            onPress: () => onLogout(),
-            style: 'destructive'
-        }])
-    }
+        Alert.alert('Confirm', 'Are you sure you want to logout?', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Logout', onPress: () => logout(), style: 'destructive' }
+        ]);
+    };
 
     return (
         <ScreenWrapper bg='white'>
-            <UserHeader user={user} router={router} handleLogout={handleLogout} />
+            <UserHeader user={combinedUser} router={router} handleLogout={handleLogout} />
         </ScreenWrapper>
-    )
-}
+    );
+};
 
 const UserHeader = ({ user, router, handleLogout }) => {
     return (
-        <View style={{ flex: 1, backgroundColor: 'white', paddingHorizontal: widthPercentage(4) }}>
-            <View>
-                <Header title="Profile" mb={30} />
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                    <Icon name='logout' color={theme.colors.rose} />
-                </TouchableOpacity>
-            </View>
+        <View style={styles.container}>
+            <Header title="Profile" mb={30} />
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <Icon name='logout' color={theme.colors.rose} />
+            </TouchableOpacity>
 
-            <View style={styles.container}>
-                <View style={{ gap: 50 }}>
-                    <View style={styles.avatarContainer}>
-                        <Avatar
-                            uri={user?.profilePicture}
-                            size={heightPercentage(12)}
-                            rounded={theme.radius.xxl * 1.4} />
-                        <Pressable style={styles.editIcon} onPress={() => router.push('editProfile')}>
-                            <Icon name='edit' strokeWidth={2.5} size={20} />
-                        </Pressable>
-                    </View>
-                    {/* User Detail */}
-                    <View style={{ alignItems: 'center', gap: 4 }}>
-                        {user && user.fullName ? (
-                            <Text style={styles.userName}>{user.fullName}</Text>
-                        ) : (
-                            <Text>Loading...</Text> // Show a placeholder while user is being fetched
-                        )}
-                    </View>
+            <View style={styles.profileContainer}>
+                {/* Avatar with edit button */}
+                <View style={styles.avatarContainer}>
+                    <Avatar
+                        uri={user?.profilePicture}
+                        size={heightPercentage(16)}
+                        rounded={theme.radius.xxl * 1.8}
+                    />
+                    <Pressable
+                        style={styles.editIcon}
+                        onPress={() => router.push('editProfile')}
+                    >
+                        <Icon name='edit' strokeWidth={2.5} size={20} />
+                    </Pressable>
                 </View>
 
+                {/* User information */}
+                <View style={{ alignItems: 'center', gap: 10 }}>
+                    <Text style={styles.userName}>
+                        {user?.fullName ?? 'Loading...'}
+                    </Text>
+                    <Text style={styles.infoText}>
+                        {user?.username ?? 'Loading...'}
+                    </Text>
+                </View>
+
+                {/* Stats for followers, following, and posts */}
+                <View style={[styles.info, {marginHorizontal: heightPercentage(1), marginVertical:heightPercentage(1.2)}]}>
+                    <Icon name='user' size={20} color={theme.colors.textLight} />
+                    <Text style={styles.infoText}>
+                        {user?.followers?.length || 0} Followers
+                    </Text>
+
+                    <Icon name='user' size={20} color={theme.colors.textLight} />
+                    <Text style={styles.infoText}>
+                        {user?.following?.length || 0} Following
+                    </Text>
+
+                    <Icon name='user' size={20} color={theme.colors.textLight} />
+                    <Text style={styles.infoText}>
+                        {user?.post || 0} Posts
+                    </Text>
+                </View>
             </View>
         </View>
-    )
-}
+    );
+};
 
 export default Profile;
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1
-    },
-    headerContainer: {
-        marginHorizontal: widthPercentage(4),
-        marginBottom: 20
-    },
-    headerShape: {
-        width: widthPercentage(100),
-        height: heightPercentage(20)
-    },
-    avatarContainer: {
-        height: heightPercentage(12),
-        width: heightPercentage(12),
-        alignSelf: 'center'
+        flex: 1,
+        backgroundColor: 'white',
+        paddingHorizontal: widthPercentage(4),
     },
     logoutButton: {
         position: 'absolute',
@@ -101,32 +156,35 @@ const styles = StyleSheet.create({
         borderRadius: theme.radius.sm,
         backgroundColor: '#fee2e2'
     },
-    listStyle: {
-        paddingHorizontal: widthPercentage(4),
-        paddingBottom: 30
+    profileContainer: {
+        flex: 1,
+        alignItems: 'center',
     },
-    noPost: {
-        fontSize: heightPercentage(2),
-        textAlign: 'center',
-        color: theme.colors.text
+    avatarContainer: {
+        height: heightPercentage(16),
+        width: heightPercentage(16),
     },
     editIcon: {
         position: 'absolute',
-        bottom: 0,
-        right: -12,
-        padding: 7,
+        bottom: 5,
+        right: -15,
+        padding: 8,
         borderRadius: 50,
         backgroundColor: 'white',
-        shadowColor: theme.colors.textLight,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 7
     },
     userName: {
-        fontSize: heightPercentage(3),
+        fontSize: heightPercentage(4),
         fontWeight: '500',
         color: theme.colors.textDark
+    },
+    infoText: {
+        fontSize: heightPercentage(1.6),
+        fontWeight: '500',
+        color: theme.colors.textLight
+    },
+    info: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10
     }
-
-})
+});
