@@ -20,7 +20,7 @@ const Login = () => {
   const passwordRef = useRef('');
   const [loading, setLoading] = useState(false);
 
-  const loginAPI = 'http://192.168.101.6:3001/api/v1/login';
+  const loginAPI = 'http://192.168.101.9:3001/api/v1/login';
 
   const onSubmit = async () => {
     const identifier = usernameOrEmailRef.current.trim();

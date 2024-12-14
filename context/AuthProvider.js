@@ -26,7 +26,7 @@ const AuthProvider = ({ children }) => {
                 return;
             }
 
-            const response = await axios.get('http://192.168.101.6:3001/api/v1/home', {
+            const response = await axios.get('http://192.168.101.9:3001/api/v1/home', {
                 headers: { Authorization: `Bearer ${token}` },
             });
 

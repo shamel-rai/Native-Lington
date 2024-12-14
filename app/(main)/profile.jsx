@@ -24,9 +24,7 @@ const Profile = () => {
     const router = useRouter();
     const [profileData, setProfileData] = useState(null); // To store the user profile fetched from API
 
-    /**
-     * Fetch User Profile from API
-     */
+ 
     const fetchUserProfile = async () => {
         try {
             const token = await SecureStore.getItemAsync('Token');
@@ -35,7 +33,7 @@ const Profile = () => {
                 return;
             }
 
-            const response = await axios.get(`http://192.168.101.6:3001/api/v1/${user.id}`, {
+            const response = await axios.get(`http://192.168.101.9:3001/api/v1/${user.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -48,9 +46,6 @@ const Profile = () => {
         }
     };
 
-    /**
-     * Call fetchUserProfile only when user is available
-     */
     useEffect(() => {
         if (user?.id) {
             fetchUserProfile();
@@ -68,9 +63,7 @@ const Profile = () => {
     // Merge the local user from context with profile data from API
     const combinedUser = { ...user, ...profileData };
 
-    /**
-     * Logout handler
-     */
+   
     const handleLogout = async () => {
         Alert.alert('Confirm', 'Are you sure you want to logout?', [
             { text: 'Cancel', style: 'cancel' },
