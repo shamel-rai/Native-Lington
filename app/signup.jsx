@@ -19,7 +19,7 @@ const signup = () => {
   const passwordRef = useRef("");
   const [loading, setLoading] = useState(false);
 
-  const signupAPI = "http://192.168.101.6:3001/api/v1/signup";
+  const signupAPI = "http://192.168.101.9:3001/api/v1/signup";
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@(islingtoncollege\.edu\.np)$/;

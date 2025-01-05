@@ -47,32 +47,28 @@ const Login = () => {
         }
       );
 
-      console.log('Server response:', response.data); // Log the entire response data
+      console.log('Server response:', response.data); 
 
       const { token, user } = response.data;
 
-      // Check if token and user are valid, but allow missing refreshToken in the response
       if (!token || !user) {
         throw new Error('Missing or invalid token/user data.');
       }
 
-      // If refreshToken is not present in response, handle accordingly
-      const refreshToken = response.data.refreshToken || null; // Handle missing refreshToken
+      const refreshToken = response.data.refreshToken || null; 
 
-      // Ensure both token and refreshToken are strings before saving
       const tokenString = typeof token === 'string' ? token : JSON.stringify(token);
       const refreshTokenString = refreshToken && typeof refreshToken === 'string'
         ? refreshToken : JSON.stringify(refreshToken);
 
-      // Save token and refreshToken in SecureStore
-      await SecureStore.setItemAsync('Token', tokenString);  // Ensure it's a string
+      await SecureStore.setItemAsync('Token', tokenString);  
       if (refreshTokenString) {
-        await SecureStore.setItemAsync('RefreshToken', refreshTokenString);  // Save refreshToken if exists
+        await SecureStore.setItemAsync('RefreshToken', refreshTokenString);  
       }
 
-      setUser(user); // Set user in context
+      setUser(user); 
 
-      router.push('home'); // Navigate to the home screen
+      router.push('home'); 
     } catch (error) {
       console.error('Login Error:', error.response?.data || error.message || error);
       const errorMessage = error.response?.data?.message || error.message || 'Login failed.';

@@ -1,4 +1,3 @@
-// AuthProvider.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
@@ -14,7 +13,7 @@ export const useAuth = () => {
 };
 
 const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(null);  // Store the full user object
     const [loading, setLoading] = useState(true);
 
     const loadUser = async () => {
@@ -31,7 +30,7 @@ const AuthProvider = ({ children }) => {
             });
 
             if (response.data?.user) {
-                setUser(response.data.user);
+                setUser(response.data.user);  // Store the full user object
             } else {
                 setUser(null);
             }
@@ -58,7 +57,7 @@ const AuthProvider = ({ children }) => {
                 return;
             }
 
-            const response = await axios.post('http://192.168.101.6:3001/api/v1/refresh-token', { refreshToken });
+            const response = await axios.post('http://192.168.101.9:3001/api/v1/refresh-token', { refreshToken });
             if (response.data?.token) {
                 await SecureStore.setItemAsync('Token', response.data.token);
                 loadUser();

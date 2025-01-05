@@ -8,6 +8,7 @@ const MainLayout = () => {
 
     useEffect(() => {
         if (loading) {
+            console.log("Loadinngggg.....")
             return;
         }
 

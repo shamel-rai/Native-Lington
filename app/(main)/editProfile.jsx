@@ -1,42 +1,92 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native'
-import React, { useEffect, useState } from 'react'
-import ScreenWrapper from '../../components/ScreenWrapper'
-import { theme } from '../../constants/theme'
-import { heightPercentage, widthPercentage } from '../../helpers/common'
-import Header from '../../components/Header'
-import { Image } from 'expo-image'
-import { useAuth } from '../../context/AuthProvider'
-import { getUserImageSrc } from '../../service/imageService'
-import Icon from '../../assets/icons'
-import Input from '../../components/Input'
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import ScreenWrapper from '../../components/ScreenWrapper';
+import { theme } from '../../constants/theme';
+import { heightPercentage, widthPercentage } from '../../helpers/common';
+import Header from '../../components/Header';
+import { Image } from 'expo-image';
+import { useAuth } from '../../context/AuthProvider';
+import { getUserImageSrc } from '../../service/imageService';
+import Icon from '../../assets/icons';
+import Input from '../../components/Input';
+import MultiOptionDropdown from '../../components/MultiOptionDropdown'; 
+import Button from '../../components/Button';
+import axios from 'axios';
+import * as SecureStore from "expo-secure-store";
 
 const EditProfile = () => {
-    const { user } = useAuth();
+    const { user, setUser } = useAuth();  // using setUser to update the context with the new user data
     const [profileData, setProfileData] = useState({
         username: "",
         bio: "",
-        interest: "",
+        interest: [],
         profilePicture: null
     });
+    const [loading, setLoading] = useState(false);
+    const [profileImage, setImage] = useState(''); 
 
-    // Load current user details once `user` changes
     useEffect(() => {
         if (user) {
             setProfileData({
-                username: user.username || 'Sawmail',  // Default username if none
-                bio: user.bio || "Why are you gay",    // Default bio if none
-                interest: user.interest || "",
+                username: user.username || '',
+                bio: user.bio || '',
+                interest: user.interest || [],
                 profilePicture: user.profilePicture || null
             });
         }
     }, [user]);
 
-    // Get the user's image source
     const imageSource = getUserImageSrc(profileData.profilePicture);
 
     const pickImage = async () => {
         // Function to pick a new image (not implemented yet)
-    }
+        let result = await ImagePicker 
+
+    };
+
+    const onSubmit = async () => {
+        const { username, bio, interest } = profileData;
+
+        if (!username || !bio || !interest.length) {
+            Alert.alert("Profile", "Please fill all the fields");
+            return;
+        }
+
+        console.log("Submitting with User ID:", user.id); 
+
+        setLoading(true);
+        try {
+            const token = await SecureStore.getItemAsync('Token');
+            if (!token) {
+                Alert.alert("Error", "No token found, please login again.");
+                return;
+            }
+
+            const response = await axios.put(
+                `http://192.168.101.9:3001/api/v1/${user.id}`,
+                { username, bio, interest }, 
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.user) {
+                setUser(response.data.user);  
+                Alert.alert("Profile", "Profile updated successfully!");
+            }
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            Alert.alert("Error", "There was an issue updating your profile.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+
+    const handleInterestChange = (newInterests) => {
+        setProfileData({ ...profileData, interest: newInterests });
+    };
+
+    const interestOptions = ['Coding', 'Design', 'Marketing', 'Business', 'AI', 'Networking'];
 
     return (
         <ScreenWrapper bg="white">
@@ -44,7 +94,6 @@ const EditProfile = () => {
                 <ScrollView style={{ flex: 1 }}>
                     <Header title="Edit Profile" />
 
-                    {/* Profile Edit Form */}
                     <View style={styles.form}>
                         <View style={styles.avatarContainer}>
                             <Image source={imageSource} style={styles.avatar} />
@@ -56,13 +105,29 @@ const EditProfile = () => {
                             Please enter your profile details
                         </Text>
 
-                        {/* Username Input */}
                         <Input
                             icon={<Icon name="user" />}
                             placeholder="Username"
-                            value={profileData.username}  // Bind to profileData.username
-                            onChangeText={value => setProfileData({ ...profileData, username: value })}  // Update profileData state
+                            value={profileData.username}
+                            onChangeText={value => setProfileData({ ...profileData, username: value })}
                         />
+
+                        <Input
+                            placeholder="Bio"
+                            value={profileData.bio}
+                            multiline={true}
+                            containerStyles={styles.bio}
+                            onChangeText={value => setProfileData({ ...profileData, bio: value })}
+                        />
+
+                        {/* MultiOptionDropdown for Interests */}
+                        <MultiOptionDropdown
+                            options={interestOptions}
+                            selectedOptions={profileData.interest}
+                            onSelectionChange={handleInterestChange}
+                        />
+
+                        <Button title="Update" loading={loading} onPress={onSubmit} />
                     </View>
                 </ScrollView>
             </View>
