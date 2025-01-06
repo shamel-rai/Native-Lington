@@ -1,183 +1,361 @@
+import React, { useState } from 'react';
 import {
-    View,
-    Text,
-    TouchableOpacity,
-    StyleSheet,
-    Alert,
-    Pressable,
-    ActivityIndicator
+  View,
+  Text,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  StatusBar,
+  RefreshControl,
+  FlatList,
 } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import ScreenWrapper from '../../components/ScreenWrapper';
-import { useAuth } from '../../context/AuthProvider';
-import { useRouter } from 'expo-router';
-import Header from '../../components/Header';
-import { heightPercentage, widthPercentage } from '../../helpers/common';
-import { theme } from '../../constants/theme';
-import Avatar from '../../components/Avatar';
-import axios from 'axios';
-import * as SecureStore from "expo-secure-store";
-import Icon from '../../assets/icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const Profile = () => {
-    const { user, logout, loading } = useAuth();
-    const router = useRouter();
-    const [profileData, setProfileData] = useState(null); // To store the user profile fetched from API
+const { width } = Dimensions.get('window');
 
- 
-    const fetchUserProfile = async () => {
-        try {
-            const token = await SecureStore.getItemAsync('Token');
-            if (!token) {
-                Alert.alert("Error", "No token found, please login again.");
-                return;
-            }
+const ProfileScreen = () => {
+  const [activeTab, setActiveTab] = useState('Post');
+  const [refreshing, setRefreshing] = useState(false);
 
-            const response = await axios.get(`http://192.168.101.9:3001/api/v1/${user.id}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+  // Mock data
+  const userProfile = {
+    username: 'Sawmail',
+    name: 'Shamel Rai',
+    bio: 'Photography enthusiast 📸 | Travel lover ✈️\nBased in New York City 🗽\nLiving life one photo at a time',
+    profileImage: 'https://via.placeholder.com/150',
+    posts: 42,
+    followers: 1523,
+    following: 824,
+  };
 
-            if (response.data) {
-                setProfileData(response.data.user);
-            }
-        } catch (error) {
-            console.error("Error fetching user profile:", error);
-            Alert.alert("Error", "There was an issue fetching the profile data.");
-        }
-    };
+  const Post = [
+    {
+      id: '1',
+      content: 'Just captured the most amazing sunset at Central Park! The colors were absolutely breathtaking 🌅',
+      likes: 234,
+      replies: 23,
+      time: '2h',
+    },
+    {
+      id: '2',
+      content: 'Photography tip of the day: Always shoot in RAW format. It gives you so much more flexibility in post-processing!',
+      likes: 156,
+      replies: 45,
+      time: '5h',
+    },
+    // Add more threads as needed
+  ];
 
-    useEffect(() => {
-        if (user?.id) {
-            fetchUserProfile();
-        }
-    }, [user]);
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
 
-    if (loading) {
-        return <ActivityIndicator size="large" color={theme.colors.primary} />;
-    }
-
-    if (!user) {
-        return <Text>User not logged in</Text>;
-    }
-
-    // Merge the local user from context with profile data from API
-    const combinedUser = { ...user, ...profileData };
-
-   
-    const handleLogout = async () => {
-        Alert.alert('Confirm', 'Are you sure you want to logout?', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Logout', onPress: () => logout(), style: 'destructive' }
-        ]);
-    };
-
-    return (
-        <ScreenWrapper bg='white'>
-            <UserHeader user={combinedUser} router={router} handleLogout={handleLogout} />
-        </ScreenWrapper>
-    );
-};
-
-const UserHeader = ({ user, router, handleLogout }) => {
-    return (
-        <View style={styles.container}>
-            <Header title="Profile" mb={30} />
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                <Icon name='logout' color={theme.colors.rose} />
-            </TouchableOpacity>
-
-            <View style={styles.profileContainer}>
-                {/* Avatar with edit button */}
-                <View style={styles.avatarContainer}>
-                    <Avatar
-                        uri={user?.profilePicture}
-                        size={heightPercentage(16)}
-                        rounded={theme.radius.xxl * 1.8}
-                    />
-                    <Pressable
-                        style={styles.editIcon}
-                        onPress={() => router.push('editProfile')}
-                    >
-                        <Icon name='edit' strokeWidth={2.5} size={20} />
-                    </Pressable>
-                </View>
-
-                {/* User information */}
-                <View style={{ alignItems: 'center', gap: 10 }}>
-                    <Text style={styles.userName}>
-                        {user?.fullName ?? 'Loading...'}
-                    </Text>
-                    <Text style={styles.infoText}>
-                        {user?.username ?? 'Loading...'}
-                    </Text>
-                </View>
-
-                {/* Stats for followers, following, and posts */}
-                <View style={[styles.info, {marginHorizontal: heightPercentage(1), marginVertical:heightPercentage(1.2)}]}>
-                    <Icon name='user' size={20} color={theme.colors.textLight} />
-                    <Text style={styles.infoText}>
-                        {user?.followers?.length || 0} Followers
-                    </Text>
-
-                    <Icon name='user' size={20} color={theme.colors.textLight} />
-                    <Text style={styles.infoText}>
-                        {user?.following?.length || 0} Following
-                    </Text>
-
-                    <Icon name='user' size={20} color={theme.colors.textLight} />
-                    <Text style={styles.infoText}>
-                        {user?.post || 0} Posts
-                    </Text>
-                </View>
-            </View>
+  const renderThread = ({ item }) => (
+    <View style={styles.threadContainer}>
+      <View style={styles.threadHeader}>
+        <View style={styles.threadUserInfo}>
+          <Image
+            source={{ uri: userProfile.profileImage }}
+            style={styles.threadUserImage}
+          />
+          <Text style={styles.threadUsername}>{userProfile.username}</Text>
+          <Text style={styles.threadTime}>{item.time}</Text>
         </View>
-    );
-};
+        <TouchableOpacity style={styles.moreButton}>
+          <Text>•••</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.threadContent}>{item.content}</Text>
+      <View style={styles.threadActions}>
+        <TouchableOpacity style={styles.actionButton}>
+          <Text style={styles.actionIcon}>♥</Text>
+          <Text style={styles.actionCount}>{item.likes}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton}>
+          <Text style={styles.actionIcon}>💬</Text>
+          <Text style={styles.actionCount}>{item.replies}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton}>
+          <Text style={styles.actionIcon}>↪</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton}>
+          <Text style={styles.actionIcon}>⇪</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
-export default Profile;
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <LinearGradient
+          colors={['#4A00E0', '#8E2DE2']}
+          style={styles.headerGradient}
+        >
+          <View style={styles.profileHeader}>
+            <View style={styles.profileMain}>
+              <View style={styles.profileInfo}>
+                <Text style={styles.name}>{userProfile.name}</Text>
+                <Text style={styles.username}>{userProfile.username}</Text>
+              </View>
+              <Image
+                source={{ uri: userProfile.profileImage }}
+                style={styles.profileImage}
+              />
+            </View>
+
+            <Text style={styles.bio}>{userProfile.bio}</Text>
+
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>
+                  {userProfile.followers.toLocaleString()}
+                </Text>
+                <Text style={styles.statLabel}>followers</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>
+                  {userProfile.following.toLocaleString()}
+                </Text>
+                <Text style={styles.statLabel}>following</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>
+                  {userProfile.posts.toLocaleString()}
+                </Text>
+                <Text style={styles.statLabel}>Post</Text>
+              </View>
+              
+            </View>
+
+            <View style={styles.actionButtons}>
+              <TouchableOpacity style={styles.editProfileButton}>
+                <Text style={styles.editProfileText}>Edit profile</Text>
+              </TouchableOpacity>
+              {/* <TouchableOpacity style={styles.shareProfileButton}>
+                <Text style={styles.shareProfileText}>Share profile</Text>
+              </TouchableOpacity> */}
+            </View>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'threads' && styles.activeTab]}
+            onPress={() => setActiveTab('threads')}
+          >
+            <Text style={[styles.tabText, activeTab === 'threads' && styles.activeTabText]}>
+              Threads
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'replies' && styles.activeTab]}
+            onPress={() => setActiveTab('replies')}
+          >
+            <Text style={[styles.tabText, activeTab === 'replies' && styles.activeTabText]}>
+              Replies
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={Post}
+          renderItem={renderThread}
+          keyExtractor={item => item.id}
+          scrollEnabled={false}
+        />
+      </ScrollView>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: 'white',
-        paddingHorizontal: widthPercentage(4),
-    },
-    logoutButton: {
-        position: 'absolute',
-        right: 0,
-        padding: 5,
-        borderRadius: theme.radius.sm,
-        backgroundColor: '#fee2e2'
-    },
-    profileContainer: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    avatarContainer: {
-        height: heightPercentage(16),
-        width: heightPercentage(16),
-    },
-    editIcon: {
-        position: 'absolute',
-        bottom: 5,
-        right: -15,
-        padding: 8,
-        borderRadius: 50,
-        backgroundColor: 'white',
-    },
-    userName: {
-        fontSize: heightPercentage(4),
-        fontWeight: '500',
-        color: theme.colors.textDark
-    },
-    infoText: {
-        fontSize: heightPercentage(1.6),
-        fontWeight: '500',
-        color: theme.colors.textLight
-    },
-    info: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10
-    }
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  headerGradient: {
+    paddingTop: 50,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  profileHeader: {
+    padding: 20,
+  },
+  profileMain: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
+  name: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  username: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  bio: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    padding: 15,
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  statLabel: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  editProfileButton: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  editProfileText: {
+    color: '#4A00E0',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  shareProfileButton: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  shareProfileText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#4A00E0',
+  },
+  tabText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#4A00E0',
+    fontWeight: '600',
+  },
+  threadContainer: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  threadHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  threadUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  threadUserImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
+  threadUsername: {
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  threadTime: {
+    color: '#666',
+  },
+  moreButton: {
+    padding: 5,
+  },
+  threadContent: {
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 15,
+  },
+  threadActions: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  actionIcon: {
+    fontSize: 20,
+  },
+  actionCount: {
+    color: '#666',
+  },
 });
+
+export default ProfileScreen;

@@ -1,191 +1,373 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import ScreenWrapper from '../../components/ScreenWrapper';
-import { theme } from '../../constants/theme';
-import { heightPercentage, widthPercentage } from '../../helpers/common';
-import Header from '../../components/Header';
-import { Image } from 'expo-image';
-import { useAuth } from '../../context/AuthProvider';
-import { getUserImageSrc } from '../../service/imageService';
-import Icon from '../../assets/icons';
-import Input from '../../components/Input';
-import MultiOptionDropdown from '../../components/MultiOptionDropdown'; 
-import Button from '../../components/Button';
-import axios from 'axios';
-import * as SecureStore from "expo-secure-store";
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  ScrollView,
+  Platform,
+  Dimensions,
+  StatusBar,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const EditProfile = () => {
-    const { user, setUser } = useAuth();  // using setUser to update the context with the new user data
-    const [profileData, setProfileData] = useState({
-        username: "",
-        bio: "",
-        interest: [],
-        profilePicture: null
+const { width } = Dimensions.get('window');
+
+const EditProfileScreen = () => {
+  const [username, setUsername] = useState('Shamel');
+  const [bio, setBio] = useState('Love coding and exploring new technologies!');
+  const [followers, setFollowers] = useState(1234);
+  const [following, setFollowing] = useState(567);
+  const [profileImage, setProfileImage] = useState('https://via.placeholder.com/150');
+  const [interests, setInterests] = useState(['Technology', 'Travel']);
+  const [showInterestDropdown, setShowInterestDropdown] = useState(false);
+
+  const availableInterests = [
+    'Technology', 'Travel', 'Photography', 'Cooking',
+    'Music', 'Sports', 'Art', 'Reading', 'Gaming',
+    'Fashion', 'Fitness', 'Movies'
+  ];
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
     });
-    const [loading, setLoading] = useState(false);
-    const [profileImage, setImage] = useState(''); 
 
-    useEffect(() => {
-        if (user) {
-            setProfileData({
-                username: user.username || '',
-                bio: user.bio || '',
-                interest: user.interest || [],
-                profilePicture: user.profilePicture || null
-            });
-        }
-    }, [user]);
+    if (!result.canceled) {
+      setProfileImage(result.assets[0].uri);
+    }
+  };
 
-    const imageSource = getUserImageSrc(profileData.profilePicture);
+  const addInterest = (interest) => {
+    if (!interests.includes(interest)) {
+      setInterests([...interests, interest]);
+    }
+    setShowInterestDropdown(false);
+  };
 
-    const pickImage = async () => {
-        // Function to pick a new image (not implemented yet)
-        let result = await ImagePicker 
+  const removeInterest = (interest) => {
+    setInterests(interests.filter(item => item !== interest));
+  };
 
-    };
+  const handleSave = () => {
+    // Implement save functionality here
+    console.log('Profile updated:', {
+      username,
+      bio,
+      interests,
+      profileImage,
+    });
+  };
 
-    const onSubmit = async () => {
-        const { username, bio, interest } = profileData;
-
-        if (!username || !bio || !interest.length) {
-            Alert.alert("Profile", "Please fill all the fields");
-            return;
-        }
-
-        console.log("Submitting with User ID:", user.id); 
-
-        setLoading(true);
-        try {
-            const token = await SecureStore.getItemAsync('Token');
-            if (!token) {
-                Alert.alert("Error", "No token found, please login again.");
-                return;
-            }
-
-            const response = await axios.put(
-                `http://192.168.101.9:3001/api/v1/${user.id}`,
-                { username, bio, interest }, 
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-
-            if (response.data.user) {
-                setUser(response.data.user);  
-                Alert.alert("Profile", "Profile updated successfully!");
-            }
-        } catch (error) {
-            console.error("Error updating profile:", error);
-            Alert.alert("Error", "There was an issue updating your profile.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
-
-    const handleInterestChange = (newInterests) => {
-        setProfileData({ ...profileData, interest: newInterests });
-    };
-
-    const interestOptions = ['Coding', 'Design', 'Marketing', 'Business', 'AI', 'Networking'];
-
-    return (
-        <ScreenWrapper bg="white">
-            <View style={styles.container}>
-                <ScrollView style={{ flex: 1 }}>
-                    <Header title="Edit Profile" />
-
-                    <View style={styles.form}>
-                        <View style={styles.avatarContainer}>
-                            <Image source={imageSource} style={styles.avatar} />
-                            <Pressable style={styles.cameraIcon} onPress={pickImage}>
-                                <Icon name="camera" size={20} strokeWidth={2.5} />
-                            </Pressable>
-                        </View>
-                        <Text style={{ fontSize: heightPercentage(1.5), color: theme.colors.text }}>
-                            Please enter your profile details
-                        </Text>
-
-                        <Input
-                            icon={<Icon name="user" />}
-                            placeholder="Username"
-                            value={profileData.username}
-                            onChangeText={value => setProfileData({ ...profileData, username: value })}
-                        />
-
-                        <Input
-                            placeholder="Bio"
-                            value={profileData.bio}
-                            multiline={true}
-                            containerStyles={styles.bio}
-                            onChangeText={value => setProfileData({ ...profileData, bio: value })}
-                        />
-
-                        {/* MultiOptionDropdown for Interests */}
-                        <MultiOptionDropdown
-                            options={interestOptions}
-                            selectedOptions={profileData.interest}
-                            onSelectionChange={handleInterestChange}
-                        />
-
-                        <Button title="Update" loading={loading} onPress={onSubmit} />
-                    </View>
-                </ScrollView>
+  return (
+    <ScrollView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient
+        colors={['#4A00E0', '#8E2DE2']}
+        style={styles.headerGradient}
+      >
+        <View style={styles.profileSection}>
+          <TouchableOpacity style={styles.imageContainer} onPress={pickImage}>
+            <Image
+              source={{ uri: profileImage }}
+              style={styles.profileImage}
+            />
+            <View style={styles.editIconContainer}>
+              <Text style={styles.editIcon}>📷</Text>
             </View>
-        </ScreenWrapper>
-    );
+          </TouchableOpacity>
+
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{followers.toLocaleString()}</Text>
+              <Text style={styles.statLabel}>Followers</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{following.toLocaleString()}</Text>
+              <Text style={styles.statLabel}>Following</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{following.toLocaleString()}</Text>
+              <Text style={styles.statLabel}>Post</Text>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.formSection}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>USERNAME</Text>
+          <TextInput
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Enter username"
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>BIO</Text>
+          <TextInput
+            style={[styles.input, styles.bioInput]}
+            value={bio}
+            onChangeText={setBio}
+            placeholder="Tell us about yourself"
+            placeholderTextColor="#999"
+            multiline
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>INTERESTS</Text>
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={() => setShowInterestDropdown(!showInterestDropdown)}
+          >
+            <Text style={styles.dropdownButtonText}>+ Add Interest</Text>
+          </TouchableOpacity>
+
+          {showInterestDropdown && (
+            <View style={styles.dropdown}>
+              {availableInterests
+                .filter(interest => !interests.includes(interest))
+                .map((interest) => (
+                  <TouchableOpacity
+                    key={interest}
+                    style={styles.dropdownItem}
+                    onPress={() => addInterest(interest)}
+                  >
+                    <Text style={styles.dropdownItemText}>{interest}</Text>
+                  </TouchableOpacity>
+                ))}
+            </View>
+          )}
+
+          <View style={styles.interestsContainer}>
+            {interests.map((interest) => (
+              <View key={interest} style={styles.interestTag}>
+                <Text style={styles.interestText}>{interest}</Text>
+                <TouchableOpacity 
+                  style={styles.removeInterestButton}
+                  onPress={() => removeInterest(interest)}
+                >
+                  <Text style={styles.removeInterest}>×</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <LinearGradient
+            colors={['#4A00E0', '#8E2DE2']}
+            style={styles.saveButtonGradient}
+          >
+            <Text style={styles.saveButtonText}>Save Changes</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
 };
 
-export default EditProfile;
-
 const styles = StyleSheet.create({
-    input: {
-        flexDirection: 'row',
-        borderWidth: 0.4,
-        borderColor: theme.colors.text,
-        borderRadius: theme.radius.xxl,
-        borderCurve: 'continuous',
-        padding: 17,
-        paddingHorizontal: 20,
-        gap: 15
-    },
-    bio: {
-        flexDirection: 'row',
-        height: heightPercentage(15),
-        alignItems: 'flex-start',
-        paddingVertical: 15
-    },
-    form: {
-        gap: 18,
-        marginTop: 20
-    },
-    cameraIcon: {
-        position: 'absolute',
-        bottom: 0,
-        right: -10,
-        padding: 8,
-        borderRadius: 50,
-        backgroundColor: 'white',
-        shadowColor: theme.colors.textLight,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 7
-    },
-    avatar: {
-        width: '100%',
-        height: '100%',
-        borderRadius: theme.radius.xxl * 1.8,
-        borderCurve: 'continuous',
-        borderWidth: 1,
-        borderColor: theme.colors.darkLight
-    },
-    avatarContainer: {
-        height: heightPercentage(18),
-        width: heightPercentage(17),
-        alignSelf: 'center'
-    },
-    container: {
-        flex: 1,
-        paddingHorizontal: widthPercentage(4)
-    }
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  headerGradient: {
+    paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight + 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  profileSection: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  imageContainer: {
+    position: 'relative',
+    marginBottom: 20,
+  },
+  profileImage: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 4,
+    borderColor: 'white',
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#4A00E0',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'white',
+  },
+  editIcon: {
+    fontSize: 20,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    padding: 15,
+    width: width * 0.8,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  statLabel: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  formSection: {
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  input: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  bioInput: {
+    height: 120,
+    textAlignVertical: 'top',
+  },
+  dropdownButton: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  dropdownButtonText: {
+    color: '#4A00E0',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  dropdown: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 16,
+    maxHeight: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  dropdownItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  interestsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  interestTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0ff',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    margin: 4,
+    borderWidth: 1,
+    borderColor: '#4A00E0',
+  },
+  interestText: {
+    color: '#4A00E0',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  removeInterestButton: {
+    marginLeft: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(74, 0, 224, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeInterest: {
+    color: '#4A00E0',
+    fontSize: 16,
+    fontWeight: 'bold',
+    lineHeight: 20,
+  },
+  saveButton: {
+    marginTop: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  saveButtonGradient: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
+
+export default EditProfileScreen;
